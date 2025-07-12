@@ -45,10 +45,36 @@
         .btn-start {
             border-radius: 25px;
         }
+                .profile-img-sm {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 2px solid #0846a1;
+            cursor: pointer;
+        }
+
+        .profile-dropdown {
+            position: absolute;
+            top: 65px;
+            right: 20px;
+            width: 300px;
+            background-color: #fff;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            z-index: 999;
+            display: none;
+            padding: 20px;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+
     </style>
 </head>
 
 <body>
+    <div th:replace="fragments/navbar :: navbar"></div>
+
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h2 th:text="'Quizzes in ' + ${language.name}">Language Quizzes</h2>

@@ -34,8 +34,18 @@ public class User {
     
     @Column
     private String gender;
+    @Column(name = "reset_token")
+    private String resetToken;
 
-    @Column(name="photo")
+
+    public String getResetToken() {
+		return resetToken;
+	}
+	public void setResetToken(String resetToken) {
+		this.resetToken = resetToken;
+	}
+
+	@Column(name="photo")
     private String photo;
     public User() {}
 	public User(Long id, String name, String email, String password, String phoneNumber,

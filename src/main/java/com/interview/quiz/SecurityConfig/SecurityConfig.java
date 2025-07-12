@@ -1,6 +1,7 @@
 package com.interview.quiz.SecurityConfig;
 
 import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -37,7 +38,8 @@ public class SecurityConfig {
                         "/signal/**",   // SockJS endpoint
                         "/app/**",      // STOMP send destinations
                         "/topic/**",    // STOMP subscribe destinations
-"/signup", "/login", "/css/**", "/js/**").permitAll()
+"/signup","/","/forgot-password","/reset-password", 
+"/login", "/css/**", "/js/**").permitAll()
                 .requestMatchers("/admin/**","/admin/dashboard").hasAuthority("Admin")
                 .requestMatchers("/user/**").hasAuthority("user")
                 .anyRequest().authenticated()

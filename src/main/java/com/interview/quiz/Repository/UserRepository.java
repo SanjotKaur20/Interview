@@ -10,5 +10,7 @@ import com.interview.quiz.Entity.User;
 
 public interface UserRepository extends JpaRepository<User, Integer>{
     Optional<User> findByEmail(String username);
+    Optional<User> findByResetToken(String resetToken);
+
 
 }

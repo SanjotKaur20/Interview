@@ -2,6 +2,7 @@ package com.interview.quiz.Controller;
 
 import com.interview.quiz.Entity.InterviewRoom;
 
+
 import com.interview.quiz.Entity.Languages;
 
 import com.interview.quiz.Entity.Question;
@@ -16,11 +17,16 @@ import com.interview.quiz.Repository.UserRepository;
 import com.interview.quiz.Service.EmailService;
 import com.interview.quiz.Service.UserService;
 import com.interview.quiz.Entity.InterviewRoom;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
 
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.security.Principal;
 
 
@@ -47,11 +53,10 @@ public class UserController {
     private InterviewRoomRepository roomRepo;
     @Autowired
     private EmailService emailService;
-
-
-
-    
-
+@GetMapping("/")
+public String Home(Model model) {
+	return "Home";
+}
 
     // Show Sign Up form
     @GetMapping("/signup")
@@ -75,19 +80,160 @@ public class UserController {
     public String showLoginForm(Model model) {
         return "login";
     }
+    @GetMapping("/forgot-password")
+    public String showForgotPasswordForm() {
+        return "forgot-password";
+    }
+
+    @PostMapping("/forgot-password")
+    public String processForgotPassword(@RequestParam("email") String email, Model model) {
+        Optional<User> userOptional = userRepository.findByEmail(email);
+        if (userOptional.isPresent()) {
+            String token = UUID.randomUUID().toString();
+            User user = userOptional.get();
+            user.setResetToken(token);
+            userRepository.save(user);
+
+            String resetLink = "http://localhost:8080/reset-password?token=" + token;
+            emailService.sendSimpleMessage(email, "Password Reset Request",
+                    "Hi " + user.getName() + ",\n\nTo reset your password, click the link below:\n" + resetLink);
+
+            model.addAttribute("success", "Reset link sent to your email.");
+        } else {
+            model.addAttribute("error", "No user found with that email.");
+        }
+        return "forgot-password";
+    }
+    @GetMapping("/reset-password")
+    public String showResetPasswordForm(@RequestParam("token") String token, Model model) {
+        model.addAttribute("token", token);
+        return "reset-password";
+    }
+
+    @PostMapping("/reset-password")
+    public String handlePasswordReset(@RequestParam String token,
+                                      @RequestParam String newPassword,
+                                      @RequestParam String confirmPassword,
+                                      Model model) {
+        if (!newPassword.equals(confirmPassword)) {
+            model.addAttribute("error", "Passwords do not match.");
+            model.addAttribute("token", token);
+            return "reset-password";
+        }
+
+        Optional<User> userOptional = userRepository.findByResetToken(token);
+        if (userOptional.isEmpty()) {
+            model.addAttribute("error", "Invalid or expired token.");
+            return "reset-password";
+        }
+
+        User user = userOptional.get();
+        user.setPassword(new BCryptPasswordEncoder().encode(newPassword));
+        user.setResetToken(null); // Clear token after reset
+        userRepository.save(user);
+
+        model.addAttribute("success", "Password has been reset successfully!");
+        return "reset-password";
+    }
+
+
+    @GetMapping("/user/change-password")
+    public String showChangePasswordForm(Model model,Principal principal) {
+        String email = principal.getName();
+
+        Optional<User> optionalUser = userRepository.findByEmail(email);
+        if (optionalUser.isEmpty()) {
+            return "redirect:/login?error=user_not_found";
+        }
+
+        User user = optionalUser.get();
+        model.addAttribute("user", user);
+
+
+        return "change-password";
+    }
+
+    @PostMapping("/user/change-password")
+    public String changePassword(@RequestParam("oldPassword") String oldPassword,
+                                 @RequestParam("newPassword") String newPassword,
+                                 @RequestParam("confirmPassword") String confirmPassword,
+                                 Model model,
+                                 Principal principal) {
+
+        String email = principal.getName();
+
+        if (!newPassword.equals(confirmPassword)) {
+            model.addAttribute("error", "New passwords do not match.");
+            return "change-password";
+        }
+
+        boolean success = userService.changeUserPassword(email, oldPassword, newPassword);
+        if (success) {
+            model.addAttribute("success", "Password changed successfully.");
+        } else {
+            model.addAttribute("error", "Old password is incorrect.");
+        }
+
+        return "change-password";
+    }
+
+
+//    @GetMapping("/user/user-dashboard")
+//    public String showLanguages(Model model,Principal principal) {
+//        String email = principal.getName(); // If you use email as the username
+//
+//        // Get user from DB using email
+//        Optional<User> optionalUser = userRepository.findByEmail(email);
+//        if (optionalUser.isPresent()) {
+//            User user = optionalUser.get();
+//            model.addAttribute("user", user);
+//        } else {
+//            // handle error, redirect or show message
+//            return "redirect:/login?error=user_not_found";
+//        }
+//
+//        List<Languages> languages = languagesRepository.findAll();
+//        model.addAttribute("user", user);
+//        model.addAttribute("languages", languages);
+//        return "user-dashboard"; // Template name
+//    }
+//
     @GetMapping("/user/user-dashboard")
-    public String showLanguages(Model model) {
+    public String showLanguages(Model model, Principal principal) {
+        String email = principal.getName();
+
+        Optional<User> optionalUser = userRepository.findByEmail(email);
+        if (optionalUser.isEmpty()) {
+            return "redirect:/login?error=user_not_found";
+        }
+
+        User user = optionalUser.get();
         List<Languages> languages = languagesRepository.findAll();
+
         model.addAttribute("languages", languages);
-        return "user-dashboard"; // Template name
+        model.addAttribute("user", user);
+
+        return "user-dashboard";
     }
 
     @GetMapping("/user/quizzes")
-    public String showQuizzesByLanguage(@RequestParam("languageId") Long languageId, Model model) {
-        List<Quiz> quizzes = quizRepository.findByLanguageId(languageId);
+    public String showQuizzesByLanguage(@RequestParam("languageId")
+    Long languageId, Model model,Principal principal) {
+        String email = principal.getName();
+
+        Optional<User> optionalUser = userRepository.findByEmail(email);
+        if (optionalUser.isEmpty()) {
+            return "redirect:/login?error=user_not_found";
+        }
+
+        User user = optionalUser.get();
+
+    	List<Quiz> quizzes = quizRepository.findByLanguageId(languageId);
         Languages language = languagesRepository.findById(languageId).orElse(null);
         model.addAttribute("quizzes", quizzes);
         model.addAttribute("language", language);
+        model.addAttribute("user", user);
+
         return "quizzes-by-language"; // Template name
     }
     @GetMapping("/user/start-test")
@@ -174,12 +320,19 @@ public class UserController {
         String email = principal.getName();
 
         // Get user by email
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+//        User user = userRepository.findByEmail(email)
+//                .orElseThrow(() -> new RuntimeException("User not found"));
+        Optional<User> optionalUser = userRepository.findByEmail(email);
+        if (optionalUser.isEmpty()) {
+            return "redirect:/login?error=user_not_found";
+        }
+        User user = optionalUser.get();
 
         // Get history records
         List<QuizHistory> historyList = quizHistoryRepository.findByUser(user);
         model.addAttribute("historyList", historyList);
+        model.addAttribute("user", user);
+
 
         return "user-quiz-history"; // Create this Thymeleaf template
     }

@@ -2,6 +2,7 @@ package com.interview.quiz.Service;
 
 
 import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -60,5 +61,20 @@ public class UserService {
     public Optional<UserType> getUserTypeByName(String typeName) {
         return userTypeRepository.findByUserTypeNameIgnoreCase(typeName);
     }
+    public boolean changeUserPassword(String email, String oldPassword, String newPassword) {
+        Optional<User> optionalUser = userRepository.findByEmail(email);
+        if (optionalUser.isEmpty()) return false;
+
+        User user = optionalUser.get();
+
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            return false;
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        return true;
+    }
+
     
 }

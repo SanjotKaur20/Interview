@@ -19,4 +19,12 @@ public class EmailService {
      message.setText("Hello,\n\nYou have an interview scheduled.\nJoin here: " + link + "\n\nBest of luck!");
      mailSender.send(message);
  }
+ public void sendSimpleMessage(String to, String subject, String text) {
+	    SimpleMailMessage message = new SimpleMailMessage();
+	    message.setTo(to);
+	    message.setSubject(subject);
+	    message.setText(text);
+	    mailSender.send(message);
+	}
+
 }
